@@ -1,0 +1,24 @@
+name: Fleet Health Check
+on:
+  schedule:
+    - cron: '*/30 * * * *'  # Every 30 minutes
+  workflow_dispatch:
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check fleet repos
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "## Fleet Health Report" >> $GITHUB_STEP_SUMMARY
+          echo "Generated: $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Check recent commits across fleet repos
+          for repo in flux-runtime flux-collab flux-a2a-signal oracle1-index; do
+            COMMITS=$(gh api "repos/SuperInstance/$repo/commits?per_page=1" --jq '.[0].commit.message' 2>/dev/null || echo "unreachable")
+            echo "- **$repo**: $COMMITS" >> $GITHUB_STEP_SUMMARY
+          done

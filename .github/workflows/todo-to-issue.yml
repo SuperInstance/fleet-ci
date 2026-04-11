@@ -1,0 +1,20 @@
+name: TODO to Issue
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 */6 * * *'  # Every 6 hours
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Find TODOs
+        run: |
+          TODOS=$(grep -rn "TODO\|FIXME\|HACK\|XXX" --include="*.py" --include="*.rs" --include="*.go" --include="*.ts" . 2>/dev/null || true)
+          echo "Found TODOs:"
+          echo "$TODOS"
+          echo "$TODOS" > todo-report.txt
+      - uses: actions/upload-artifact@v4
+        with: { name: todo-report, path: todo-report.txt }

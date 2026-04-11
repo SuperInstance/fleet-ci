@@ -1,0 +1,25 @@
+name: Cross-Repo Sync
+on:
+  push:
+    branches: [main]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Notify fleet repos
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # When this repo updates, create a dispatch event in fleet repos
+          REPO="${{ github.repository }}"
+          MSG="${{ github.event.head_commit.message }}"
+          
+          for target in flux-runtime oracle1-index iron-to-iron fleet-workshop; do
+            curl -s -X POST \
+              -H "Authorization: token $GH_TOKEN" \
+              -H "Accept: application/vnd.github.v3+json" \
+              "https://api.github.com/repos/SuperInstance/$target/dispatches" \
+              -d "{\"event_type\":\"fleet_update\",\"client_payload\":{\"source\":\"$REPO\",\"message\":\"$MSG\"}}" || true
+          done

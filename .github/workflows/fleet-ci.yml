@@ -1,0 +1,76 @@
+name: Fleet CI
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  detect-language:
+    runs-on: ubuntu-latest
+    outputs:
+      languages: ${{ steps.detect.outputs.languages }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: detect
+        run: |
+          LANGS="[]"
+          [ -f "Cargo.toml" ] && LANGS=$(echo $LANGS | jq '. += ["rust"]')
+          [ -f "go.mod" ] && LANGS=$(echo $LANGS | jq '. += ["go"]')
+          [ -f "package.json" ] && LANGS=$(echo $LANGS | jq '. += ["node"]')
+          [ -f "pyproject.toml" ] && LANGS=$(echo $LANGS | jq '. += ["python"]')
+          [ -f "Makefile" ] && LANGS=$(echo $LANGS | jq '. += ["c"]')
+          echo "languages=$LANGS" >> $GITHUB_OUTPUT
+
+  test-python:
+    needs: detect-language
+    if: contains(needs.detect-language.outputs.languages, '"python"')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install pytest
+      - run: pytest tests/ -v --tb=short 2>&1 | tee test-output.txt
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with: { name: python-test-results, path: test-output.txt }
+
+  test-rust:
+    needs: detect-language
+    if: contains(needs.detect-language.outputs.languages, '"rust"')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cargo test --lib 2>&1 | tee test-output.txt
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with: { name: rust-test-results, path: test-output.txt }
+
+  test-go:
+    needs: detect-language
+    if: contains(needs.detect-language.outputs.languages, '"go"')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version: '1.24' }
+      - run: go test ./... -v 2>&1 | tee test-output.txt
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with: { name: go-test-results, path: test-output.txt }
+
+  fleet-report:
+    needs: [test-python, test-rust, test-go]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate fleet report
+        run: |
+          echo "## Fleet CI Report" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Python | ${{ needs.test-python.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Rust | ${{ needs.test-rust.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Go | ${{ needs.test-go.result }} |" >> $GITHUB_STEP_SUMMARY
