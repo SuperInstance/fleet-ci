@@ -1,0 +1,9 @@
+README.md
+pyproject.toml
+src/fleet_ci/__init__.py
+src/fleet_ci/pipeline.py
+src/fleet_ci.egg-info/PKG-INFO
+src/fleet_ci.egg-info/SOURCES.txt
+src/fleet_ci.egg-info/dependency_links.txt
+src/fleet_ci.egg-info/top_level.txt
+tests/test_pipeline.py
