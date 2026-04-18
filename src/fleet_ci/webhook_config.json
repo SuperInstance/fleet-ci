@@ -1,0 +1,63 @@
+{
+  "server": {
+    "host": "0.0.0.0",
+    "port": 8080,
+    "secret": "",
+    "debug": true
+  },
+  "routes": [
+    {
+      "name": "push-to-all",
+      "event": "push",
+      "branches": ["main", "develop"],
+      "target_repos": ["*"],
+      "notify": true
+    },
+    {
+      "name": "pr-to-reviewers",
+      "event": "pull_request",
+      "actions": ["opened", "ready_for_review", "synchronize"],
+      "target_repos": ["SuperInstance/fleet-ci"],
+      "notify": true
+    },
+    {
+      "name": "issue-triage",
+      "event": "issues",
+      "actions": ["opened", "labeled"],
+      "labels": ["bug", "fleet-critical"],
+      "target_repos": ["SuperInstance/fleet-ci", "SuperInstance/oracle1-index"],
+      "notify": true
+    },
+    {
+      "name": "workflow-failures",
+      "event": "workflow_run",
+      "actions": ["completed"],
+      "conclusion": ["failure", "cancelled"],
+      "target_repos": ["*"],
+      "notify": true,
+      "priority": "high"
+    },
+    {
+      "name": "workflow-success",
+      "event": "workflow_run",
+      "actions": ["completed"],
+      "conclusion": ["success"],
+      "target_repos": [],
+      "notify": false
+    }
+  ],
+  "bottle": {
+    "max_messages": 1000,
+    "default_ttl_seconds": 86400,
+    "retention_policy": "fifo"
+  },
+  "fleet_repos": [
+    "SuperInstance/fleet-ci",
+    "SuperInstance/oracle1-index",
+    "SuperInstance/flux-vm-python",
+    "SuperInstance/flux-vm-rust",
+    "SuperInstance/flux-vm-go",
+    "SuperInstance/agent-coordinator",
+    "SuperInstance/deploy-bot"
+  ]
+}
